@@ -1,0 +1,68 @@
+services:
+
+  # ── Kafka (KRaft mode, no Zookeeper) ──────────────────────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:9094,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true" # 직접 생성하지 않고 테스트
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk" # KRaft 필수값
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  # ── PostgreSQL - groupbuy-service ─────────────────────────────────────────
+  groupbuy-db:
+    image: postgres:16
+    container_name: groupbuy-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: groupbuy
+      POSTGRES_USER: groupbuy
+      POSTGRES_PASSWORD: groupbuy
+    volumes:
+      - groupbuy_db_data:/var/lib/postgresql/data
+
+  # ── PostgreSQL - inventory-service ────────────────────────────────────────
+  inventory-db:
+    image: postgres:16
+    container_name: inventory-db
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+    volumes:
+      - inventory_db_data:/var/lib/postgresql/data
+
+  # ── Kafka UI ───────────────────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8989:8080"                   
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=localaaa
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      - kafka
+
+volumes:
+  kafka_data:
+  groupbuy_db_data:
+  inventory_db_data:
