@@ -10,6 +10,9 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
   kafka:
     bootstrap-servers: localhost:9094
     producer:
