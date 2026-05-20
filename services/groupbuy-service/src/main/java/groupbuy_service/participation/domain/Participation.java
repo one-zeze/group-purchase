@@ -1,9 +1,7 @@
 package groupbuy_service.participation.domain;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import groupbuy_service.common.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,14 +12,17 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Getter
-public class Participation {
+public class Participation extends BaseEntity {
   @Id
-  String participationId;
+  private String participationId;
 
-  String groupbuyId;
-  String productId;
-  String userId;
-  int quantity;
+  private String groupbuyId;
+  private String productId;
+  private String userId;
+  private int quantity;
+
+  @Enumerated(EnumType.STRING)
+  private ParticipationStatus status;
 
   @Builder
   public Participation(String groupbuyId, String productId, String userId, int quantity){

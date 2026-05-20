@@ -1,5 +1,6 @@
 package groupbuy_service.product.domain;
 
+import groupbuy_service.common.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -14,7 +15,7 @@ import java.util.UUID;
 @Entity
 @NoArgsConstructor
 @Getter
-public class Product {
+public class Product extends BaseEntity {
   @Id
   private String productId;
 
@@ -28,6 +29,21 @@ public class Product {
     this.name = name;
     this.price = price;
     this.initialStock = initialStock;
+  }
+
+  public void updateStock(int stock) {
+    //exception
+    this.initialStock = stock;
+  }
+
+  public void updatePrice(BigDecimal price) {
+    //exception
+    this.price = price;
+  }
+
+  public void updateName(String name){
+    //exception
+    this.name = name;
   }
 
 }

@@ -11,6 +11,10 @@ CREATE TABLE groupbuy (
     groupbuy_id VARCHAR(36) PRIMARY KEY,
     product_id VARCHAR(36) NOT NULL REFERENCES product(product_id),
     status VARCHAR(20) NOT NULL,
+    target_quantity INT NOT NULL,
+    current_quantity INT DEFAULT 0,
+    start_at TIMESTAMPZ,
+    end_at TIMESTAMPZ,
     created_at TIMESTAMPZ,
     updated_at TIMESTAMPZ
 );
