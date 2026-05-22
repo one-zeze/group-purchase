@@ -1,6 +1,8 @@
 package groupbuy_service.product.domain;
 
 import groupbuy_service.common.BaseEntity;
+import groupbuy_service.global.BusinessException;
+import groupbuy_service.global.ErrorCode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -24,7 +26,10 @@ public class Product extends BaseEntity {
   private int initialStock;
 
   @Builder
-  public Product(String name, BigDecimal price, Integer initialStock) {
+  public Product(String name, BigDecimal price, int initialStock) {
+    validatePrice(price);
+    validateInitialStock(initialStock);
+
     this.productId = UUID.randomUUID().toString();
     this.name = name;
     this.price = price;
@@ -32,18 +37,29 @@ public class Product extends BaseEntity {
   }
 
   public void updateStock(int stock) {
-    //exception
+    validateInitialStock(stock);
     this.initialStock = stock;
   }
 
   public void updatePrice(BigDecimal price) {
-    //exception
+    validatePrice(price);
     this.price = price;
   }
 
   public void updateName(String name){
-    //exception
     this.name = name;
+  }
+
+  private void validateInitialStock(int initialStock) {
+    if (initialStock < 0) {
+      throw new BusinessException(ErrorCode.INITIAL_STOCK_INVALID);
+    }
+  }
+
+  private void validatePrice(BigDecimal price) {
+    if (price.compareTo(BigDecimal.ZERO) < 0) {
+      throw new BusinessException(ErrorCode.PRODUCT_PRICE_INVALID);
+    }
   }
 
 }
