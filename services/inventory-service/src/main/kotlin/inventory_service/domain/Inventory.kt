@@ -1,5 +1,7 @@
 package inventory_service.domain
 
+import inventory_service.global.error.BusinessException
+import inventory_service.global.error.ErrorCode
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -23,8 +25,11 @@ class Inventory(
     var updatedAt: Instant = Instant.now()
 ) {
     fun decrease(quantity: Int) {
+        if (quantity < 0) {
+            throw BusinessException(ErrorCode.INVALID_QUANTITY)
+        }
         if (this.stockQuantity < quantity) {
-            throw IllegalArgumentException("재고가 부족합니다. (현재: ${this.stockQuantity}, 요청: $quantity)")
+            throw BusinessException(ErrorCode.INSUFFICIENT_STOCK)
         }
         this.stockQuantity -= quantity
         this.updatedAt = Instant.now()
