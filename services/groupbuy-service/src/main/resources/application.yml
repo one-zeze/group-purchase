@@ -8,11 +8,14 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     show-sql: true
   jackson:
-    serialization:
-      write-dates-as-timestamps: false
+#    serialization:
+#      write-dates-as-timestamps: false
+  output:
+    ansi:
+      enabled: always
   kafka:
     bootstrap-servers: localhost:9094
     producer:

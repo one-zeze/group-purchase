@@ -11,10 +11,12 @@
 
 
 ## Service Responsibility Classification
-1.product-service 
 
-2.groupby-service
+1.groupbuy-service  
+└─ groupbuy  
+└─ participation  
+└─ product 👉 product-service로 분리 가능
 
-3.inventory-service
+2.inventory-service
 
-4.user-service
+3.user-service
