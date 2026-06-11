@@ -1,5 +1,6 @@
 package inventory_service.service
 
+import inventory_service.domain.Inventory
 import inventory_service.global.error.BusinessException
 import inventory_service.global.error.ErrorCode
 import inventory_service.repository.InventoryRepository
@@ -19,4 +20,15 @@ class InventoryService(
         inventory.decrease(quantity)
         // JPA dirty checking will handle the update
     }
+
+    @Transactional
+    fun registStock(productId: String, quantity: Int) {
+        if (inventoryRepository.existsById(productId)) {
+            throw BusinessException(ErrorCode.STOCK_ALREADY_EXIST)
+        }
+        inventoryRepository.save(Inventory(productId, quantity))
+
+    }
+
+
 }

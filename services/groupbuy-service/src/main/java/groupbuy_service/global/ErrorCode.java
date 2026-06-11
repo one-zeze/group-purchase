@@ -18,6 +18,7 @@ public enum ErrorCode {
     PRODUCT_NOT_FOUND(404,"상품을 찾을수 없습니다"),
     PRODUCT_OUT_OF_STOCK(400,"재고가 없습니다."),
     PARTICIPATION_DATE_EXPIRED(400,"참여 기간이 아닙니다"),
+    PARTICIPATION_NOT_AVAILABLE(400,"현재 참여 가능한 상태가 아닙니다."),
     ORDER_QUANTITY_INVALID(400,"주문 수량이 올바르지 않습니다"),
     GROUPBUY_STARTAT_INVALID(400,"시작일이 올바르지 않습니다"),
     GROUPBUY_ENDAT_INVALID(400,"종료일이 올바르지 않습니다"),
