@@ -23,6 +23,7 @@ repositories {
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("io.github.oshai:kotlin-logging-jvm:8.0.4")
 
 	implementation("org.springframework.boot:spring-boot-starter-kafka")
 

@@ -20,4 +20,7 @@ public class ParticipationController {
         participationService.participate(groupbuyId, request);
         return "참여 요청이 접수되었습니다. (groupbuyId: " + groupbuyId + ")";
     }
+
+
+
 }

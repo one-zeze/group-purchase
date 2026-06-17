@@ -56,6 +56,17 @@ public class Groupbuy extends BaseEntity {
   public void addCurrentQuantity(int quantity) {
     validateAddQuantity(quantity);
     this.currentQuantity += quantity;
+    checkCompletion();
+  }
+
+  private void checkCompletion() {
+      if (this.status == GroupbuyStatus.OPEN && this.currentQuantity >= this.targetQuantity) {
+          this.status = GroupbuyStatus.COMPLETED;
+      }
+  }
+
+  public boolean isCompleted() {
+      return this.status == GroupbuyStatus.COMPLETED;
   }
 
   private void validateTargetQuantity(int targetQuantity) {

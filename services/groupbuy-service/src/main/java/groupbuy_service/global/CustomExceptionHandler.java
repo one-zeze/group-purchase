@@ -11,7 +11,7 @@ public class CustomExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.warn("BusineessException: {}", e.getMessage());
+        log.warn("BusinessException: {}", e.getMessage());
         ErrorResponse response = ErrorResponse.from(e.getErrorCode());
 
         return ResponseEntity.status(response.getStatus()).body(response);
