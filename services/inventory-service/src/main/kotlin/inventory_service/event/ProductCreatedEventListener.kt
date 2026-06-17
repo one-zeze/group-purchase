@@ -1,5 +1,7 @@
 package inventory_service.event
 
+import inventory_service.global.error.BusinessException
+import inventory_service.global.error.ErrorCode
 import tools.jackson.databind.ObjectMapper
 import inventory_service.service.InventoryService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -21,8 +23,16 @@ class ProductCreatedEventListener(
             log.info { "상품등록 이벤트 메시지 수신 성공: $event" }
             inventoryService.registStock(event.productId, event.initialStock)
         }
+        catch (e: BusinessException){
+            if (e.errorCode == ErrorCode.STOCK_ALREADY_EXIST) {
+                log.info { "이미 등록된 재고입니다. productId: ${e.message}" }
+                return
+            }
+            throw e
+        }
         catch (e: Exception){
             log.error(e) {"상품등록 이벤트 메시지 수신 실패"}
+            throw e
         }
     }
 
