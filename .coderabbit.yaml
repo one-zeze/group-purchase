@@ -6,7 +6,7 @@ reviews:
   profile: "assertive"
   poem: true
   instructions: |
-    all reviews should be technically clear, concise and chill.
+    all reviews should be technically clear and concise.
   pre_merge_checks:
     docstrings:
       mode: "off"

@@ -64,16 +64,27 @@ public class ParticipationServiceImpl implements ParticipationService {
         Participation participation = participationRepository.findById(participationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
 
+        if (participation.getStatus() != ParticipationStatus.REQUESTED) {
+            log.info("이미 처리된 참여 요청입니다. participationId={}, status={}", participationId, participation.getStatus());
+            return;
+        }
+
         Groupbuy groupbuy = groupbuyRepository.findByIdWithLock(participation.getGroupbuyId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GROUPBUY_NOT_FOUND));
+
+        // OPEN 상태일 때만 수량 추가
+        if (groupbuy.getStatus() != GroupbuyStatus.OPEN) {
+            log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        .warn("공동구매가 오픈 상태가 아니므로 참여를 확정할 수 없습니다. groupbuyId={}, status={}",
+                    groupbuy.getGroupbuyId(), groupbuy.getStatus());
+            participation.updateStatus(ParticipationStatus.FAILED);
+            return;
+        }
 
         groupbuy.addCurrentQuantity(participation.getQuantity());
-
         participation.updateStatus(ParticipationStatus.SUCCESS);
         log.info("참여 확정 성공: participationId={}", participationId);
 
-        if (groupbuy.isCompleted()){
-            // event publish
+        if (groupbuy.getStatus() == GroupbuyStatus.COMPLETED) {
             publishGroupbuyConfirmedEvent(groupbuy);
         }
 

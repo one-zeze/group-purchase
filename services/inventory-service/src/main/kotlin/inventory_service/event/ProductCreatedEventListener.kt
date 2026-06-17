@@ -22,7 +22,7 @@ class ProductCreatedEventListener(
             inventoryService.registStock(event.productId, event.initialStock)
         }
         catch (e: Exception){
-            log.error(e) {"상품등록 이벤트 메시지 수신  실패"}
+            log.error(e) {"상품등록 이벤트 메시지 수신 실패"}
         }
     }
 
