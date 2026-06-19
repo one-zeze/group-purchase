@@ -1,5 +1,6 @@
 package groupbuy_service.participation.event;
 
+import groupbuy_service.common.event.DomainEvent;
 import groupbuy_service.participation.domain.Participation;
 
 import java.time.Instant;
@@ -14,8 +15,18 @@ public record ParticipationRequestedEvent(
         String productId,
         String userId,
         int quantity
-) {
+) implements DomainEvent {
     public static final String TOPIC = "groupbuy.participation.requested";
+
+    @Override
+    public String getTopic() {
+        return TOPIC;
+    }
+
+    @Override
+    public String getKey() {
+        return productId;
+    }
 
     public static ParticipationRequestedEvent from(
             Participation participation
