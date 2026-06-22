@@ -13,10 +13,9 @@ import groupbuy_service.participation.event.ParticipationRequestedEvent;
 import groupbuy_service.participation.repository.ParticipationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -25,8 +24,7 @@ public class ParticipationServiceImpl implements ParticipationService {
 
     private final GroupbuyRepository groupbuyRepository;
     private final ParticipationRepository participationRepository;
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     @Override
@@ -47,15 +45,8 @@ public class ParticipationServiceImpl implements ParticipationService {
         
         Participation savedParticipation = participationRepository.save(participation);
 
-        try {
-            ParticipationRequestedEvent event = ParticipationRequestedEvent.from(savedParticipation);
-            String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(ParticipationRequestedEvent.TOPIC, event.productId(), payload);
-            log.info("참여 요청 이벤트 발행 성공: participationId={}", savedParticipation.getParticipationId());
-        } catch (Exception e) {
-            log.error("이벤트 발행 중 오류 발생", e);
-            throw new RuntimeException("이벤트 발행 실패", e);
-        }
+        eventPublisher.publishEvent(ParticipationRequestedEvent.from(savedParticipation));
+        log.info("참여 요청 이벤트 발행 예약(커밋 후 전송): participationId={}", savedParticipation.getParticipationId());
     }
 
     @Transactional
@@ -74,8 +65,7 @@ public class ParticipationServiceImpl implements ParticipationService {
 
         // OPEN 상태일 때만 수량 추가
         if (groupbuy.getStatus() != GroupbuyStatus.OPEN) {
-            log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        .warn("공동구매가 오픈 상태가 아니므로 참여를 확정할 수 없습니다. groupbuyId={}, status={}",
-                    groupbuy.getGroupbuyId(), groupbuy.getStatus());
+            log.warn("공동구매가 오픈 상태가 아니므로 참여를 확정할 수 없습니다. groupbuyId={}, status={}", groupbuy.getGroupbuyId(), groupbuy.getStatus());
             participation.updateStatus(ParticipationStatus.FAILED);
             return;
         }
@@ -85,19 +75,8 @@ public class ParticipationServiceImpl implements ParticipationService {
         log.info("참여 확정 성공: participationId={}", participationId);
 
         if (groupbuy.getStatus() == GroupbuyStatus.COMPLETED) {
-            publishGroupbuyConfirmedEvent(groupbuy);
-        }
-
-    }
-
-    private void publishGroupbuyConfirmedEvent(Groupbuy groupbuy) {
-        try {
-            GroupbuyConfirmedEvent event = GroupbuyConfirmedEvent.of(groupbuy.getGroupbuyId(), groupbuy.getProductId());
-            String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(GroupbuyConfirmedEvent.TOPIC, groupbuy.getGroupbuyId(), payload);
-            log.info("공동구매 확정 이벤트 발행: groupbuyId={}", groupbuy.getGroupbuyId());
-        } catch (Exception e){
-            log.error("공동구매 확정 이벤트 발행 실패", e);
+            eventPublisher.publishEvent(GroupbuyConfirmedEvent.of(groupbuy.getGroupbuyId(), groupbuy.getProductId()));
+            log.info("공동구매 확정 이벤트 발행 예약(커밋 후 전송): groupbuyId={}", groupbuy.getGroupbuyId());
         }
 
     }
