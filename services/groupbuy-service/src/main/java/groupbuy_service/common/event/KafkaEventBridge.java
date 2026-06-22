@@ -6,7 +6,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Component
@@ -21,7 +21,12 @@ public class KafkaEventBridge {
         log.info("Publishing event to Kafka after commit: {}", event.getTopic());
         try {
             String payload = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(event.getTopic(), event.getKey(), payload);
+            kafkaTemplate.send(event.getTopic(), event.getKey(), payload)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to send event to topic: {}, key: {}", event.getTopic(), event.getKey(), ex);
+                    }
+                });
         } catch (Exception e) {
             log.error("Failed to serialize or send event: {}", event.getTopic(), e);
         }
