@@ -1,0 +1,11 @@
+파일명 - 작업내용
+V2__create_order_payment.sql - 주문 및 결제 기초 스키마 정의 (tb_order, tb_payment)
+Order.java - 주문 엔티티 정의 (안전한 Builder 패턴 및 검증)
+OrderStatus.java - 주문 상태 Enum 정의
+OrderRepository.java - 주문 JPA 레포지토리 인터페이스 정의
+Payment.java - 결제 엔티티 정의 (안전한 Builder 패턴)
+PaymentStatus.java - 결제 상태 Enum 정의
+PaymentRepository.java - 결제 JPA 레포지토리 인터페이스 정의
+Groupbuy.java - NoArgsConstructor(access = AccessLevel.PROTECTED) 안전 옵션 적용
+Participation.java - NoArgsConstructor(access = AccessLevel.PROTECTED) 안전 옵션 적용
+Product.java - NoArgsConstructor(access = AccessLevel.PROTECTED) 안전 옵션 적용
