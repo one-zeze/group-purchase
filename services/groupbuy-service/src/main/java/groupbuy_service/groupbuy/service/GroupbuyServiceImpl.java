@@ -42,7 +42,7 @@ public class GroupbuyServiceImpl implements GroupbuyService {
         
         if (groupbuy.getStatus() != GroupbuyStatus.CLOSED) {
             log.warn("[GroupbuyService] 이미 오픈되었거나 완료된 공동구매입니다. id={}, status={}", groupbuyId, groupbuy.getStatus());
-            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+            throw new BusinessException(ErrorCode.GROUPBUY_INVALID);
         }
         
         groupbuy.updateStatus(GroupbuyStatus.OPEN);

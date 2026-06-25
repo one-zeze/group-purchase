@@ -25,6 +25,7 @@ public class Order extends BaseEntity {
     private String participationId;
 
     private int quantity;
+    @Column(precision = 15, scale = 2)
     private BigDecimal totalPrice;
     @Enumerated(EnumType.STRING)
     private OrderStatus status;

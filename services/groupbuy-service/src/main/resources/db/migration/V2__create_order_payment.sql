@@ -7,8 +7,8 @@ CREATE TABLE tb_order (
     quantity INT NOT NULL,
     total_price NUMERIC(15,2) NOT NULL,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPZ,
-    updated_at TIMESTAMPZ
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
 );
 
 CREATE TABLE tb_payment (
@@ -17,6 +17,6 @@ CREATE TABLE tb_payment (
     user_id VARCHAR(36) NOT NULL,
     amount NUMERIC(15,2) NOT NULL,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPZ,
-    updated_at TIMESTAMPZ
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
 );

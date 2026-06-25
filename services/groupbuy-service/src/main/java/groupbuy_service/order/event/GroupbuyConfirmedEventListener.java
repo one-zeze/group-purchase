@@ -23,7 +23,7 @@ public class GroupbuyConfirmedEventListener {
             orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
         }
         catch (Exception e){
-            log.error("공동구매 확정 이벤트 발행 실패: ()", e);
+            log.error("공동구매 확정 이벤트 처리 실패: {}", message, e);
         }
 
     }

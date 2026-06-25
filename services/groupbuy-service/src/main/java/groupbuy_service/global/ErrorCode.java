@@ -23,6 +23,7 @@ public enum ErrorCode {
     GROUPBUY_NOT_FOUND(404,"공동구매 정보가 없습니다"),
     GROUPBUY_STARTAT_INVALID(400,"시작일이 올바르지 않습니다"),
     GROUPBUY_ENDAT_INVALID(400,"종료일이 올바르지 않습니다"),
+    GROUPBUY_INVALID(400,"참여할 수 없는 공동구매 입니다"),
     INITIAL_STOCK_INVALID(400, "초기 재고는 0보다 작을 수 없습니다."),
     PRODUCT_PRICE_INVALID(400, "상품 가격은 0보다 작을 수 없습니다."),
     TARGET_QUANTITY_INVALID(400, "목표 수량이 올바르지 않습니다."),
