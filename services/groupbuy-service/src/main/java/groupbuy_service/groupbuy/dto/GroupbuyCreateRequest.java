@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class GroupbuyCreateRequest {
     @NotBlank
     private String productId;
-    @Min(0)
+    @Min(1)
     private int targetQuantity;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
