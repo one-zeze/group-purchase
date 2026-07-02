@@ -1,7 +1,7 @@
 package groupbuy_service.groupbuy.dto;
 
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 public class GroupbuyCreateRequest {
-    @NotNull
+    @NotBlank
     private String productId;
     @Min(0)
     private int targetQuantity;
