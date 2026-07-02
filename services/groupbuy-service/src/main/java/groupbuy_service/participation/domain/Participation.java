@@ -4,6 +4,7 @@ import groupbuy_service.common.BaseEntity;
 import groupbuy_service.global.BusinessException;
 import groupbuy_service.global.ErrorCode;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 @Table(name = "participation")
 @Entity
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Participation extends BaseEntity {
   @Id

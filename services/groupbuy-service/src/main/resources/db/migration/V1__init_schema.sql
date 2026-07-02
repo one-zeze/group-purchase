@@ -3,8 +3,8 @@ CREATE TABLE product (
     name VARCHAR(255) NOT NULL,
     price NUMERIC(15,2) NOT NULL,
     initial_stock INT NOT NULL,
-    created_at TIMESTAMPZ,
-    updated_at TIMESTAMPZ
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
 );
 
 CREATE TABLE groupbuy (
@@ -15,8 +15,8 @@ CREATE TABLE groupbuy (
     current_quantity INT DEFAULT 0,
     start_at TIMESTAMPZ,
     end_at TIMESTAMPZ,
-    created_at TIMESTAMPZ,
-    updated_at TIMESTAMPZ
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
 );
 
 CREATE TABLE participation(
@@ -26,5 +26,6 @@ CREATE TABLE participation(
     user_id VARCHAR(36) NOT NULL,
     quantity INT NOT NULL,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPZ
+    created_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ
 );

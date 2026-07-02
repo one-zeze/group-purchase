@@ -4,17 +4,14 @@ import groupbuy_service.common.BaseEntity;
 import groupbuy_service.global.BusinessException;
 import groupbuy_service.global.ErrorCode;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Table(name = "groupbuy")
 @Entity
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Groupbuy extends BaseEntity {
   @Id
