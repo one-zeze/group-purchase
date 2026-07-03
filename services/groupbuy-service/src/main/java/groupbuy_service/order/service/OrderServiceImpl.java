@@ -4,6 +4,7 @@ import groupbuy_service.global.BusinessException;
 import groupbuy_service.global.ErrorCode;
 import groupbuy_service.groupbuy.repository.GroupbuyRepository;
 import groupbuy_service.order.domain.Order;
+import groupbuy_service.order.domain.OrderStatus;
 import groupbuy_service.order.event.OrderCreatedEvent;
 import groupbuy_service.order.event.OrderInfo;
 import groupbuy_service.order.repository.OrderRepository;
@@ -68,5 +69,25 @@ public class OrderServiceImpl implements OrderService{
         OrderCreatedEvent event = OrderCreatedEvent.of(groupbuyId, list);
         eventPublisher.publishEvent(event);
 
+    }
+
+    @Override
+    @Transactional
+    public void cancelOrder(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        order.updateStatus(OrderStatus.CANCELLED);
+        log.info("주문 취소 처리 성공: orderId{}", orderId);
+    }
+
+    @Override
+    @Transactional
+    public void completedOrder(String orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+
+        order.updateStatus(OrderStatus.PAID);
+        log.info("주문 결제 성공: orderId{}", orderId);
     }
 }

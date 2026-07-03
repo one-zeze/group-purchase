@@ -19,6 +19,7 @@ public class Payment extends BaseEntity {
     @Id
     private String paymentId;
 
+    @Column(unique = true, nullable = false)
     private String orderId;
     private String userId;
 
@@ -35,6 +36,10 @@ public class Payment extends BaseEntity {
         this.orderId = orderId;
         this.userId = userId;
         this.amount = amount;
+    }
+
+    public void setStatus(PaymentStatus status){
+        this.status = status;
     }
 
 }
