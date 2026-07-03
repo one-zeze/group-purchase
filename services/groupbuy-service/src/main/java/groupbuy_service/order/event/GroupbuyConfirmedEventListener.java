@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
@@ -14,12 +14,12 @@ import tools.jackson.databind.ObjectMapper;
 public class GroupbuyConfirmedEventListener {
 
     private final OrderService orderService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     @KafkaListener(topics = GroupbuyConfirmedEvent.TOPIC, groupId = "groupbuy-service-group")
     public void onGroupbuyCOnfirmedEvent(String message) {
         try{
-            GroupbuyConfirmedEvent event = objectMapper.readValue(message, GroupbuyConfirmedEvent.class);
+            GroupbuyConfirmedEvent event = jsonMapper.readValue(message, GroupbuyConfirmedEvent.class);
             orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
         }
         catch (Exception e){

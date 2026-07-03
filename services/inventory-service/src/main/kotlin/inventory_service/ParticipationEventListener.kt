@@ -1,6 +1,6 @@
 package inventory_service
 
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import inventory_service.event.ParticipationRequestedEvent
 import inventory_service.event.StockDecreasedEvent
 import inventory_service.event.StockDecreaseFailedEvent
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component
 
 @Component
 class ParticipationEventListener(
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
     private val inventoryService: InventoryService,
     private val kafkaTemplate: KafkaTemplate<String, String>
 ) {
@@ -21,7 +21,7 @@ class ParticipationEventListener(
 
     @KafkaListener(topics = ["groupbuy.participation.requested"], groupId = "inventory-service-group")
     fun onParticipationRequested(message: String) {
-        val event = objectMapper.readValue(message, ParticipationRequestedEvent::class.java)
+        val event = jsonMapper.readValue(message, ParticipationRequestedEvent::class.java)
         try {
             log.info(
                 "[inventory-service] 참여 요청 수신: eventId={}, participationId={}, productId={}, userId={}, quantity={}",
@@ -48,7 +48,7 @@ class ParticipationEventListener(
             productId = requestEvent.productId,
             quantity = requestEvent.quantity
         )
-        val payload = objectMapper.writeValueAsString(successEvent)
+        val payload = jsonMapper.writeValueAsString(successEvent)
         kafkaTemplate.send(StockDecreasedEvent.TOPIC, requestEvent.participationId, payload)
     }
 
@@ -60,7 +60,7 @@ class ParticipationEventListener(
             errorCode = errorCode,
             errorMessage = errorMessage
         )
-        val payload = objectMapper.writeValueAsString(failureEvent)
+        val payload = jsonMapper.writeValueAsString(failureEvent)
         kafkaTemplate.send(StockDecreaseFailedEvent.TOPIC, requestEvent.participationId, payload)
     }
 }

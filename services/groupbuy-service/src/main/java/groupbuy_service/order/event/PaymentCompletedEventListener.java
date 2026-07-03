@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
@@ -15,12 +15,12 @@ import tools.jackson.databind.ObjectMapper;
 public class PaymentCompletedEventListener {
 
     private final OrderService orderService;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     @KafkaListener(topics = PaymentCompletedEvent.TOPIC, groupId = "groupbuy-service-order")
     public void onPaymentCompleted(String message) {
         try {
-            PaymentCompletedEvent event = objectMapper.readValue(message, PaymentCompletedEvent.class);
+            PaymentCompletedEvent event = jsonMapper.readValue(message, PaymentCompletedEvent.class);
             log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
 
             if (event.status() == PaymentStatus.SUCCESS) {
