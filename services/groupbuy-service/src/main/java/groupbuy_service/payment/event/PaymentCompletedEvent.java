@@ -9,7 +9,7 @@ import java.util.UUID;
 public record PaymentCompletedEvent (
         String eventId,
         int version,
-        Instant occuredAt,
+        Instant occurredAt,
         String paymentId,
         String orderId,
         String userId,

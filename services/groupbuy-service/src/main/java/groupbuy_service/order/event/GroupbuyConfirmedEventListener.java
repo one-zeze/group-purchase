@@ -17,13 +17,14 @@ public class GroupbuyConfirmedEventListener {
     private final JsonMapper jsonMapper;
 
     @KafkaListener(topics = GroupbuyConfirmedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onGroupbuyCOnfirmedEvent(String message) {
+    public void onGroupbuyCOnfirmedEvent(String message) throws Exception{
         try{
             GroupbuyConfirmedEvent event = jsonMapper.readValue(message, GroupbuyConfirmedEvent.class);
             orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
         }
         catch (Exception e){
             log.error("공동구매 확정 이벤트 처리 실패: {}", message, e);
+            throw e;
         }
 
     }

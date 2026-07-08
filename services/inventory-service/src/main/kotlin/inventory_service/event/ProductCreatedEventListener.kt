@@ -24,16 +24,22 @@ class ProductCreatedEventListener(
             inventoryService.registStock(event.productId, event.initialStock)
         }
         catch (e: BusinessException){
-            if (e.errorCode == ErrorCode.STOCK_ALREADY_EXIST) {
-                log.info { "이미 등록된 재고입니다. productId: ${e.message}" }
-                return
+            when (e.errorCode) {
+                ErrorCode.STOCK_ALREADY_EXIST -> {
+                    log.info { "이미 등록된 재고입니다. productId: ${e.message}" }
+                    return // 처리 성공
+                }
+                else -> {
+                    log.error(e) {"상품등록 이벤트 처리 실패"}
+                    throw e
+                }
             }
-            throw e
         }
         catch (e: Exception){
             log.error(e) {"상품등록 이벤트 메시지 수신 실패"}
             throw e
         }
+
     }
 
 }
