@@ -34,4 +34,12 @@ class Inventory(
         this.stockQuantity -= quantity
         this.updatedAt = Instant.now()
     }
+
+    fun increase(quantity: Int) {
+        if (quantity < 0) {
+            throw BusinessException(ErrorCode.INVALID_QUANTITY)
+        }
+        this.stockQuantity += quantity
+        this.updatedAt = Instant.now()
+    }
 }
