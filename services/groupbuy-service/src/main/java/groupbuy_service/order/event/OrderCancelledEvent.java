@@ -1,22 +1,22 @@
-package groupbuy_service.payment.event;
+package groupbuy_service.order.event;
 
 import groupbuy_service.common.event.DomainEvent;
-import groupbuy_service.payment.domain.PaymentStatus;
 
 import java.time.Instant;
 import java.util.UUID;
 
-public record PaymentCompletedEvent (
+public record OrderCancelledEvent(
         String eventId,
         int version,
         Instant occurredAt,
-        String paymentId,
+        String participationId,
         String orderId,
-        String userId,
-        PaymentStatus status
+        String productId,
+        int quantity
+
 ) implements DomainEvent {
 
-    public static final String TOPIC = "payment.completed";
+    public static final String TOPIC = "order.cancelled";
 
     @Override
     public String getTopic() {
@@ -28,15 +28,16 @@ public record PaymentCompletedEvent (
         return orderId;
     }
 
-    public static PaymentCompletedEvent of (String paymentId, String orderId, String userId, PaymentStatus status) {
-        return new PaymentCompletedEvent(
+    public static OrderCancelledEvent of (String participationId, String orderId, String productId, int quantity) {
+        return new OrderCancelledEvent(
                 UUID.randomUUID().toString(),
                 1,
                 Instant.now(),
-                paymentId,
+                participationId,
                 orderId,
-                userId,
-                status);
+                productId,
+                quantity
+        );
     }
 
 }

@@ -16,18 +16,19 @@ public class InventoryResultEventListener {
     private final JsonMapper jsonMapper;
 
     @KafkaListener(topics = StockDecreasedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onStockDecreased(String message) {
+    public void onStockDecreased(String message) throws Exception{
         try {
             StockDecreasedEvent event = jsonMapper.readValue(message, StockDecreasedEvent.class);
             log.info("[groupbuy-service] 재고 차감 성공 수신: participationId={}", event.participationId());
             participationService.confirmParticipation(event.participationId());
         } catch (Exception e) {
             log.error("재고 차감 성공 이벤트 처리 중 오류", e);
+            throw e;
         }
     }
 
     @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onStockDecreaseFailed(String message) {
+    public void onStockDecreaseFailed(String message) throws Exception{
         try {
             StockDecreaseFailedEvent event = jsonMapper.readValue(message, StockDecreaseFailedEvent.class);
             log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}", 
@@ -35,6 +36,7 @@ public class InventoryResultEventListener {
             participationService.failParticipation(event.participationId());
         } catch (Exception e) {
             log.error("재고 차감 실패 이벤트 처리 중 오류", e);
+            throw e;
         }
     }
 }

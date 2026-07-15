@@ -22,6 +22,15 @@ class InventoryService(
     }
 
     @Transactional
+    fun increaseStock(productId: String, quantity: Int) {
+        val inventory = inventoryRepository.findByProductIdWithLock(productId)
+            .orElseThrow { BusinessException(ErrorCode.PRODUCT_NOT_FOUND) }
+
+        inventory.increase(quantity)
+        // JPA dirty checking will handle the update
+    }
+
+    @Transactional
     fun registStock(productId: String, quantity: Int) {
         if (inventoryRepository.existsById(productId)) {
             throw BusinessException(ErrorCode.STOCK_ALREADY_EXIST)

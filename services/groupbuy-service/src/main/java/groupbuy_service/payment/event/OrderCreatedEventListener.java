@@ -18,7 +18,7 @@ public class OrderCreatedEventListener {
     private final PaymentService paymentService;
 
     @KafkaListener(topics = OrderCreatedEvent.TOPIC, groupId = "groupbuy-service-payment-group")
-    public void onOrderCreatedEvent(String message) {
+    public void onOrderCreatedEvent(String message) throws Exception{
         try {
             OrderCreatedEvent event = jsonMapper.readValue(message, OrderCreatedEvent.class);
             log.info("주문생성 이벤트 수신: groupbuyId={}, orderCnt={}", event.groupbuyId(), event.orders().size());
@@ -27,6 +27,7 @@ public class OrderCreatedEventListener {
 
         } catch (Exception e){
             log.error("주문생성 이벤트 수신 실패: {}", message, e);
+            throw e;
         }
 
     }

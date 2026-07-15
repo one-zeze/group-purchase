@@ -5,6 +5,7 @@ import groupbuy_service.global.ErrorCode;
 import groupbuy_service.groupbuy.repository.GroupbuyRepository;
 import groupbuy_service.order.domain.Order;
 import groupbuy_service.order.domain.OrderStatus;
+import groupbuy_service.order.event.OrderCancelledEvent;
 import groupbuy_service.order.event.OrderCreatedEvent;
 import groupbuy_service.order.event.OrderInfo;
 import groupbuy_service.order.repository.OrderRepository;
@@ -79,6 +80,13 @@ public class OrderServiceImpl implements OrderService{
 
         order.updateStatus(OrderStatus.CANCELLED);
         log.info("주문 취소 처리 성공: orderId{}", orderId);
+
+        OrderCancelledEvent event = OrderCancelledEvent.of(
+                order.getParticipationId()
+                , orderId
+                , order.getProductId()
+                , order.getQuantity());
+        eventPublisher.publishEvent(event);
     }
 
     @Override

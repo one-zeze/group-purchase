@@ -18,7 +18,7 @@ public class PaymentCompletedEventListener {
     private final JsonMapper jsonMapper;
 
     @KafkaListener(topics = PaymentCompletedEvent.TOPIC, groupId = "groupbuy-service-order")
-    public void onPaymentCompleted(String message) {
+    public void onPaymentCompleted(String message) throws Exception{
         try {
             PaymentCompletedEvent event = jsonMapper.readValue(message, PaymentCompletedEvent.class);
             log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
@@ -31,7 +31,8 @@ public class PaymentCompletedEventListener {
             }
         }
         catch (Exception e) {
-            log.info("결제 완료 이벤트 처리 실패: {}", message, e);
+            log.error("결제 완료 이벤트 처리 실패: {}", message, e);
+            throw e;
         }
 
     }
