@@ -3,20 +3,34 @@ package groupbuy_service.participation.event;
 import groupbuy_service.participation.service.ParticipationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.annotation.BackOff;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class InventoryResultEventListener {
+public class StockDecreasedEventListener {
 
     private final ParticipationService participationService;
     private final JsonMapper jsonMapper;
 
+    @RetryableTopic(
+            attempts = "3",
+            backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 20000),
+            exclude = {JacksonException.class},
+            dltStrategy = DltStrategy.FAIL_ON_ERROR,
+            autoCreateTopics = "true"
+    )
     @KafkaListener(topics = StockDecreasedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onStockDecreased(String message) throws Exception{
+    public void onStockDecreased(String message) throws Exception {
         try {
             StockDecreasedEvent event = jsonMapper.readValue(message, StockDecreasedEvent.class);
             log.info("[groupbuy-service] 재고 차감 성공 수신: participationId={}", event.participationId());
@@ -27,16 +41,8 @@ public class InventoryResultEventListener {
         }
     }
 
-    @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onStockDecreaseFailed(String message) throws Exception{
-        try {
-            StockDecreaseFailedEvent event = jsonMapper.readValue(message, StockDecreaseFailedEvent.class);
-            log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}", 
-                    event.participationId(), event.errorMessage());
-            participationService.failParticipation(event.participationId());
-        } catch (Exception e) {
-            log.error("재고 차감 실패 이벤트 처리 중 오류", e);
-            throw e;
-        }
+    @DltHandler
+    public void handleDlt(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("[DLT] 재고 차감 성공 이벤트 처리 최종 실패. topic: {}, content: {}", topic, message);
     }
 }

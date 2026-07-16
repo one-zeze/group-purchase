@@ -1,7 +1,6 @@
-package groupbuy_service.order.event;
+package groupbuy_service.participation.event;
 
-import groupbuy_service.groupbuy.event.GroupbuyConfirmedEvent;
-import groupbuy_service.order.service.OrderService;
+import groupbuy_service.participation.service.ParticipationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -18,9 +17,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class GroupbuyConfirmedEventListener {
+public class StockDecreaseFailedEventListener {
 
-    private final OrderService orderService;
+    private final ParticipationService participationService;
     private final JsonMapper jsonMapper;
 
     @RetryableTopic(
@@ -30,21 +29,21 @@ public class GroupbuyConfirmedEventListener {
             dltStrategy = DltStrategy.FAIL_ON_ERROR,
             autoCreateTopics = "true"
     )
-    @KafkaListener(topics = GroupbuyConfirmedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onGroupbuyCOnfirmedEvent(String message) throws Exception{
-        try{
-            GroupbuyConfirmedEvent event = jsonMapper.readValue(message, GroupbuyConfirmedEvent.class);
-            orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
-        }
-        catch (Exception e){
-            log.error("공동구매 확정 이벤트 처리 실패: {}", message, e);
+    @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
+    public void onStockDecreaseFailed(String message) throws Exception {
+        try {
+            StockDecreaseFailedEvent event = jsonMapper.readValue(message, StockDecreaseFailedEvent.class);
+            log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}",
+                    event.participationId(), event.errorMessage());
+            participationService.failParticipation(event.participationId());
+        } catch (Exception e) {
+            log.error("재고 차감 실패 이벤트 처리 중 오류", e);
             throw e;
         }
     }
 
     @DltHandler
     public void handleDlt(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("공동구매 확정 이벤트 처리 실패, topic: {}, content: {}", topic, message);
+        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, content: {}", topic, message);
     }
-
 }
