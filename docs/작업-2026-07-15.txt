@@ -1,1 +1,0 @@
-D:/0.wz/group-purchase/docs/kafka_dlt_implementation_guide.md - 카프카 재시도 및 DLT 구현 가이드 문서 작성

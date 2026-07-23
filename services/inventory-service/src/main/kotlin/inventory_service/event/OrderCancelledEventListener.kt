@@ -11,11 +11,9 @@ import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.messaging.handler.annotation.Header
 import org.springframework.stereotype.Component
 import tools.jackson.core.JacksonException
-import tools.jackson.databind.json.JsonMapper
 
 @Component
 class OrderCancelledEventListener(
-    private val jsonMapper: JsonMapper,
     private val inventoryService: InventoryService
 ) {
     private val log = KotlinLogging.logger {}
@@ -28,9 +26,8 @@ class OrderCancelledEventListener(
         autoCreateTopics = "true"
     )
     @KafkaListener(topics = ["order.cancelled"], groupId = "inventory-service-order-cancelled")
-    fun restoreStock(message: String) {
+    fun restoreStock(event: OrderCancelledEvent) {
         try {
-            val event = jsonMapper.readValue(message, OrderCancelledEvent::class.java)
             inventoryService.increaseStock(event.productId, event.quantity)
         } catch (e: Exception) {
             log.error(e) { "주문취소 재고 처리 실패" }
@@ -39,7 +36,7 @@ class OrderCancelledEventListener(
     }
 
     @DltHandler
-    fun handleDlt(message: String, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error { "[DLT] 주문취소 재고 처리 최종 실패. topic: $topic, content: $message" }
+    fun handleDlt(event: OrderCancelledEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
+        log.error { "[DLT] 주문취소 재고 처리 최종 실패. topic: $topic, content: $event" }
     }
 }

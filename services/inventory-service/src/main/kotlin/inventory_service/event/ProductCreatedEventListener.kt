@@ -13,11 +13,9 @@ import org.springframework.kafka.support.KafkaHeaders
 import org.springframework.messaging.handler.annotation.Header
 import org.springframework.stereotype.Component
 import tools.jackson.core.JacksonException
-import tools.jackson.databind.json.JsonMapper
 
 @Component
 class ProductCreatedEventListener(
-    private val jsonMapper: JsonMapper,
     private val inventoryService: InventoryService
 ) {
     private val log = KotlinLogging.logger {}
@@ -30,9 +28,8 @@ class ProductCreatedEventListener(
         autoCreateTopics = "true"
     )
     @KafkaListener(topics = ["product.created"], groupId = "product-created-event")
-    fun registProduct(message: String) {
+    fun registProduct(event: ProductCreatedEvent) {
         try {
-            val event = jsonMapper.readValue(message, ProductCreatedEvent::class.java)
             log.info { "상품등록 이벤트 메시지 수신 성공: $event" }
             inventoryService.registStock(event.productId, event.initialStock)
         } catch (e: BusinessException) {
@@ -53,7 +50,7 @@ class ProductCreatedEventListener(
     }
 
     @DltHandler
-    fun handleDlt(message: String, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error { "[DLT] 상품 등록 처리 최종 실패. topic: $topic, content: $message" }
+    fun handleDlt(event: ProductCreatedEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
+        log.error { "[DLT] 상품 등록 처리 최종 실패. topic: $topic, content: $event" }
     }
 }

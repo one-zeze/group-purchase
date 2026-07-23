@@ -31,8 +31,7 @@ class ParticipationEventListener(
         autoCreateTopics = "true"
     )
     @KafkaListener(topics = ["groupbuy.participation.requested"], groupId = "inventory-service-group")
-    fun onParticipationRequested(message: String) {
-        val event = jsonMapper.readValue(message, ParticipationRequestedEvent::class.java)
+    fun onParticipationRequested(event: ParticipationRequestedEvent) {
         try {
             log.info(
                 "[inventory-service] 참여 요청 수신: eventId={}, participationId={}, productId={}, userId={}, quantity={}",
@@ -55,8 +54,8 @@ class ParticipationEventListener(
     }
 
     @DltHandler
-    fun handleDlt(message: String, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error("[DLT] 참여 요청 처리 최종 실패. topic: $topic, content: $message")
+    fun handleDlt(event: ParticipationRequestedEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
+        log.error("[DLT] 참여 요청 처리 최종 실패. topic: $topic, content: $event")
     }
 
     private fun publishSuccessEvent(requestEvent: ParticipationRequestedEvent) {

@@ -13,8 +13,8 @@ CREATE TABLE groupbuy (
     status VARCHAR(20) NOT NULL,
     target_quantity INT NOT NULL,
     current_quantity INT DEFAULT 0,
-    start_at TIMESTAMPZ,
-    end_at TIMESTAMPZ,
+    start_at TIMESTAMPTZ,
+    end_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ
 );

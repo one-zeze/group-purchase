@@ -1,5 +1,6 @@
 package groupbuy_service.participation.event;
 
+import groupbuy_service.global.reconciliation.service.DltReconciliationService;
 import groupbuy_service.participation.service.ParticipationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,6 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
@@ -20,7 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class StockDecreaseFailedEventListener {
 
     private final ParticipationService participationService;
-    private final JsonMapper jsonMapper;
+    private final DltReconciliationService dltReconciliationService;
 
     @RetryableTopic(
             attempts = "3",
@@ -30,9 +30,8 @@ public class StockDecreaseFailedEventListener {
             autoCreateTopics = "true"
     )
     @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
-    public void onStockDecreaseFailed(String message) throws Exception {
+    public void onStockDecreaseFailed(StockDecreaseFailedEvent event) throws Exception {
         try {
-            StockDecreaseFailedEvent event = jsonMapper.readValue(message, StockDecreaseFailedEvent.class);
             log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}",
                     event.participationId(), event.errorMessage());
             participationService.failParticipation(event.participationId());
@@ -43,7 +42,8 @@ public class StockDecreaseFailedEventListener {
     }
 
     @DltHandler
-    public void handleDlt(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, content: {}", topic, message);
+    public void handleDlt(StockDecreaseFailedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, content: {}", topic, event);
+        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: StockDecreaseFailedEvent");
     }
 }

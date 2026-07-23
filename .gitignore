@@ -1,6 +1,9 @@
 ### docs ###
 docs/
 
+### logs ###
+log.txt
+
 HELP.md
 .gradle
 build/

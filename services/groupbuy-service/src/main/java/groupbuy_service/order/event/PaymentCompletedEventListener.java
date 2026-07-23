@@ -1,5 +1,6 @@
 package groupbuy_service.order.event;
 
+import groupbuy_service.global.reconciliation.service.DltReconciliationService;
 import groupbuy_service.order.service.OrderService;
 import groupbuy_service.payment.domain.PaymentStatus;
 import groupbuy_service.payment.event.PaymentCompletedEvent;
@@ -14,7 +15,6 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 @Component
@@ -22,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class PaymentCompletedEventListener {
 
     private final OrderService orderService;
-    private final JsonMapper jsonMapper;
+    private final DltReconciliationService dltReconciliationService;
 
     @RetryableTopic(
             attempts = "3",
@@ -32,9 +32,8 @@ public class PaymentCompletedEventListener {
             autoCreateTopics = "true"
     )
     @KafkaListener(topics = PaymentCompletedEvent.TOPIC, groupId = "groupbuy-service-order")
-    public void onPaymentCompleted(String message) throws Exception{
+    public void onPaymentCompleted(PaymentCompletedEvent event) throws Exception{
         try {
-            PaymentCompletedEvent event = jsonMapper.readValue(message, PaymentCompletedEvent.class);
             log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
 
             if (event.status() == PaymentStatus.SUCCESS) {
@@ -45,15 +44,16 @@ public class PaymentCompletedEventListener {
             }
         }
         catch (Exception e) {
-            log.error("결제 완료 이벤트 처리 실패: {}", message, e);
+            log.error("결제 완료 이벤트 처리 실패: {}", event, e);
             throw e;
         }
 
     }
 
     @DltHandler
-    public void handleDlt(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("결제 완료 처리 실패, topic: {}, content: {}", topic, message);
+    public void handleDlt(PaymentCompletedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("결제 완료 처리 실패, topic: {}, content: {}", topic, event);
+        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: PaymentCompletedEvent");
     }
 
 }
