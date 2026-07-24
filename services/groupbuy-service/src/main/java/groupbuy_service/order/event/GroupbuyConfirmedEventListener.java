@@ -33,19 +33,22 @@ public class GroupbuyConfirmedEventListener {
     )
     @KafkaListener(topics = GroupbuyConfirmedEvent.TOPIC, groupId = "groupbuy-service-group")
     public void onGroupbuyConfirmedEvent(GroupbuyConfirmedEvent event) throws Exception{
-        try{
-            orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
-        }
-        catch (Exception e){
-            log.error("공동구매 확정 이벤트 처리 실패: {}", event, e);
-            throw e;
-        }
+        log.info("공동구매 확정 이벤트 수신: groupbuy={}, productId={}", event.groupbuyId(), event.productId());
+        orderService.createOrdersForGroupbuy(event.groupbuyId(), event.productId());
     }
 
     @DltHandler
-    public void handleDlt(GroupbuyConfirmedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("공동구매 확정 이벤트 처리 실패, topic: {}, content: {}", topic, event);
-        reconciliationService.logFailedEvent(topic, event, "FailedEvent: GroupbuyConfirmedEvent");
+    public void handleDlt(
+            GroupbuyConfirmedEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+    ) {
+        String errorMessage = exceptionMessage != null
+                ? exceptionMessage
+                : "FailedEvent: GroupbuyConfirmedEvent";
+
+        log.error("공동구매 확정 이벤트 처리 실패, topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        reconciliationService.logFailedEvent(topic, event, errorMessage);
     }
 
 }

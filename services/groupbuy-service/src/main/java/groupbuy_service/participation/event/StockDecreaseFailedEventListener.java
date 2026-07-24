@@ -31,19 +31,23 @@ public class StockDecreaseFailedEventListener {
     )
     @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
     public void onStockDecreaseFailed(StockDecreaseFailedEvent event) throws Exception {
-        try {
-            log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}",
-                    event.participationId(), event.errorMessage());
-            participationService.failParticipation(event.participationId());
-        } catch (Exception e) {
-            log.error("재고 차감 실패 이벤트 처리 중 오류", e);
-            throw e;
-        }
+        log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}",
+                event.participationId(), event.errorMessage());
+        participationService.failParticipation(event.participationId());
     }
 
     @DltHandler
-    public void handleDlt(StockDecreaseFailedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, content: {}", topic, event);
-        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: StockDecreaseFailedEvent");
+    public void handleDlt(
+            StockDecreaseFailedEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+    ) {
+        String errorMessage = exceptionMessage != null
+                ? exceptionMessage
+                : "FailedEvent: StockDecreaseFailedEvent";
+
+        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage);
+
     }
 }

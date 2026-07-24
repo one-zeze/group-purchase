@@ -32,17 +32,21 @@ public class OrderCancelledEventListener {
     )
     @KafkaListener(topics = OrderCancelledEvent.TOPIC, groupId = "groupbuy-service-group")
     public void onOrderCancelledEvent(OrderCancelledEvent event) throws Exception {
-        try{
-            participationService.failParticipation(event.participationId());
-        }catch (Exception e){
-            log.error("[groupbuy-service]주문 취소 이벤트 처리 실패: {}", event, e);
-            throw e;
-        }
+        log.info("[groupbuy-service] 주문 취소 이벤트 수신: participationId={}", event.participationId());
+        participationService.failParticipation(event.participationId());
     }
 
     @DltHandler
-    public void handleDlt(OrderCancelledEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("🚨 [DLT] 주문 취소 처리 최종 실패. topic: {}, content: {}", topic, event);
-        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: OrderCancelledEvent");
+    public void handleDlt(
+            OrderCancelledEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+    ) {
+        String errorMessage = exceptionMessage != null
+                ? exceptionMessage
+                : "FailedEvent: OrderCancelledEvent";
+
+        log.error("🚨 [DLT] 주문 취소 처리 최종 실패. topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage);
     }
 }

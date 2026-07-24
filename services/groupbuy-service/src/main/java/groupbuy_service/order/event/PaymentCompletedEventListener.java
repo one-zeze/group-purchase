@@ -33,27 +33,28 @@ public class PaymentCompletedEventListener {
     )
     @KafkaListener(topics = PaymentCompletedEvent.TOPIC, groupId = "groupbuy-service-order")
     public void onPaymentCompleted(PaymentCompletedEvent event) throws Exception{
-        try {
-            log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
-
-            if (event.status() == PaymentStatus.SUCCESS) {
-                orderService.completedOrder(event.orderId());
-            }
-            else if (event.status() == PaymentStatus.FAILED) {
-                orderService.cancelOrder(event.orderId());
-            }
+        log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
+        if (event.status() == PaymentStatus.SUCCESS) {
+            orderService.completedOrder(event.orderId());
         }
-        catch (Exception e) {
-            log.error("결제 완료 이벤트 처리 실패: {}", event, e);
-            throw e;
+        else if (event.status() == PaymentStatus.FAILED) {
+            orderService.cancelOrder(event.orderId());
         }
 
     }
 
     @DltHandler
-    public void handleDlt(PaymentCompletedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("결제 완료 처리 실패, topic: {}, content: {}", topic, event);
-        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: PaymentCompletedEvent");
+    public void handleDlt(
+            PaymentCompletedEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+    ) {
+        String errorMessage = exceptionMessage != null
+                ? exceptionMessage
+                : "FailedEvent: PaymentCompletedEvent";
+
+        log.error("결제 완료 처리 실패, topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage);
     }
 
 }

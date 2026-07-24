@@ -32,21 +32,23 @@ public class OrderCreatedEventListener {
     )
     @KafkaListener(topics = OrderCreatedEvent.TOPIC, groupId = "groupbuy-service-payment-group")
     public void onOrderCreatedEvent(OrderCreatedEvent event) throws Exception{
-        try {
-            log.info("주문생성 이벤트 수신: groupbuyId={}, orderCnt={}", event.groupbuyId(), event.orders().size());
-            // 결제정보 생성 서비스 호출
-            paymentService.createPayments(event);
-
-        } catch (Exception e){
-            log.error("주문생성 이벤트 수신 실패: {}", event, e);
-            throw e;
-        }
+        log.info("주문생성 이벤트 수신: groupbuyId={}, orderCnt={}", event.groupbuyId(), event.orders().size());
+        // 결제정보 생성 서비스 호출
+        paymentService.createPayments(event);
     }
 
     @DltHandler
-    public void handleDlt(OrderCreatedEvent event, @Header(KafkaHeaders.RECEIVED_TOPIC)String topic) {
-        log.error("[DLT] 주문 생성 실패. topic: {}, content: {}", topic, event);
-        dltReconciliationService.logFailedEvent(topic, event, "FailedEvent: OrderCreatedEvent");
+    public void handleDlt(
+            OrderCreatedEvent event,
+            @Header(KafkaHeaders.RECEIVED_TOPIC)String topic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+    ) {
+        String errorMessage = exceptionMessage != null
+                ? exceptionMessage
+                : "FailedEvent: OrderCreatedEvent";
+
+        log.error("[DLT] 주문 생성 실패. topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage);
     }
 
 
