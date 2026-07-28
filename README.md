@@ -1,113 +1,203 @@
-# 🛒 Event-Driven Group Purchase MSA (공동구매 마이크로서비스)
+# 🛒 Event-Driven Group Purchase MSA
 
-> **Apache Kafka와 Spring Boot 기반의 비동기 이벤트 주도 공동구매 시스템**
->
-> 본 프로젝트는 동시성 제어 및 데이터 정합성 보장이 필요한 공동구매 시나리오를 가정하고, 비동기 데이터 일관성 보장과 서비스 간 결합도 완화를 위해 설계된 **이벤트 주도 아키텍처(EDA)** 마이크로서비스 프로젝트입니다. 코레오그래피 사가(Choreography Saga) 패턴을 적용하여 이종 서비스(주문-재고) 간의 비동기 트랜잭션 흐름을 관리합니다.
+Apache Kafka와 Spring Boot 기반의 이벤트 주도 공동구매 시스템입니다.
 
+공동구매 참여, 재고 차감, 주문 생성, 결제와 취소 보상을 비동기 이벤트로 연결합니다. 서비스별 데이터베이스를 분리하고 Choreography Saga 방식으로 서비스 간 결합도를 낮추면서 최종적 일관성을 관리하는 학습 프로젝트입니다.
 
----
+## System Architecture
 
-## 🏗️ 1. System Architecture & Flow
+```text
+┌──────────────────────────┐         Kafka          ┌──────────────────────────┐
+│ groupbuy-service         │ ─────────────────────▶ │ inventory-service        │
+│ Java / Spring Boot       │ ◀───────────────────── │ Kotlin / Spring Boot     │
+│                          │                        │                          │
+│ 상품 · 공동구매 · 참여   │                        │ 재고 차감 · 재고 복구     │
+│ 주문 · 결제 · DLT 대사   │                        │                          │
+└────────────┬─────────────┘                        └────────────┬─────────────┘
+             │                                                   │
+       PostgreSQL:5433                                    PostgreSQL:5434
+```
 
-본 프로젝트는 서비스 간 강한 결합을 피하고 확장성을 확보하기 위해 **Apache Kafka**를 메시지 브로커로 사용하여 비동기 통신을 수행합니다.
-
-### 🔄 참여 및 재고 차감 비동기 플로우 (Saga Pattern)
+### 공동구매 참여와 재고 차감
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant GB as groupbuy-service (Java)
-    participant Kafka as Kafka Message Broker
-    participant IV as inventory-service (Kotlin)
+    participant GB as groupbuy-service
+    participant Kafka
+    participant IV as inventory-service
 
-    User->>GB: 공동구매 참여 요청 (POST /groupbuy/{id}/participate)
-    Note over GB: Participation 상태: PENDING
-    GB->>Kafka: ParticipationRequestedEvent 발행
-    
-    Note over IV: groupbuy.participation.requested 구독
-    Kafka-->>IV: 이벤트 소비
-    
-    alt 재고 있음 (Success Case)
-        IV->>IV: 재고 차감 (decreaseStock)
-        IV->>Kafka: StockDecreasedEvent 발행
-        Kafka-->>GB: 이벤트 소비 (groupbuy.inventory.decreased)
-        GB->>GB: Participation 상태 변경 (SUCCESS)
-    else 재고 부족/오류 (Failure Case)
-        IV->>Kafka: StockDecreaseFailedEvent 발행
-        Kafka-->>GB: 이벤트 소비 (groupbuy.inventory.decrease_failed)
-        GB->>GB: Participation 상태 변경 (FAIL)
+    User->>GB: POST /groupbuy/{id}/participate
+    Note over GB: Participation = REQUESTED
+    GB->>Kafka: groupbuy.participation.requested
+    Kafka-->>IV: ParticipationRequestedEvent
+
+    alt 재고 차감 성공
+        IV->>IV: 재고 차감
+        IV->>Kafka: inventory.stock.decreased
+        Kafka-->>GB: StockDecreasedEvent
+        Note over GB: Participation = SUCCESS
+    else 재고 부족 등 비즈니스 실패
+        IV->>Kafka: inventory.stock.decrease-failed
+        Kafka-->>GB: StockDecreaseFailedEvent
+        Note over GB: Participation = FAILED
     end
 ```
 
-### 💳 주문 & 결제 파이프라인
-공동구매 목표 수량이 달성되어 마감(Confirm)되면 다음 시나리오가 트리거됩니다:
-1. `groupbuy-service` 내부에서 참여 성공한 인원들을 대상으로 **주문을 일괄 생성(Batch Create)**합니다.
-2. 주문이 생성되면 `OrderCreatedEvent`가 발행되어 내부 `payment` 도메인으로 전송됩니다.
-3. 결제 처리 결과(성공/실패)에 따라 주문의 최종 상태(`PAID` 또는 `CANCELLED`)가 결정되며, 주문 취소 시 **보상 트랜잭션**으로 `OrderCancelledEvent`가 돌며 재고 롤백이 진행됩니다.
+### 주문, 결제와 보상 흐름
 
----
+1. 공동구매 목표 수량이 달성되면 `groupbuy.confirmed` 이벤트가 발행됩니다.
+2. 참여 성공 건을 기준으로 주문을 생성하고 `order.created` 이벤트를 발행합니다.
+3. 결제 결과는 `payment.completed` 이벤트로 주문 상태에 반영됩니다.
+4. 주문 취소 시 `order.cancelled` 이벤트를 발행하고 inventory-service가 재고를 복구합니다.
 
-## 🛠️ 2. Tech Stack
+## Reliability
 
-| 분류 | 기술 기술 (Tech Stack) | 상세 설명 |
-| :--- | :--- | :--- |
-| **Common** | Java 21, Gradle, PostgreSQL | 기본 백엔드 언어 및 관계형 데이터베이스 |
-| **Message Broker** | Apache Kafka (KRaft mode) | 마이크로서비스 간 비동기 이벤트 발행 및 소비 |
-| **Microservices** | **groupbuy-service** (Spring Boot 4.0.5, Groovy Gradle) <br> **inventory-service** (Spring Boot 4.0.5, Kotlin Gradle) | 핵심 비즈니스 로직(공동구매/주문) 및 재고 관리 마이크로서비스 |
-| **DevOps** | Docker, Docker Compose | 로컬 카프카 및 데이터베이스 인프라 컨테이너화 |
+### Non-blocking Retry와 DLT
 
----
+Kafka 리스너는 `@RetryableTopic`을 사용합니다. 시스템 예외가 발생하면 소비자 스레드에서 대기하지 않고 Retry 토픽으로 메시지를 이동시킨 후, 재시도를 모두 소모한 메시지를 DLT로 보냅니다.
 
-## 🗂️ 3. Service Specification
+```text
+original topic
+  → retry-1000
+  → retry-2000
+  → dlt
+```
 
-### 1) [groupbuy-service](file:///D:/Dev/group-purchase/services/groupbuy-service) (Java 21)
-* **책임**: 상품 등록, 공동구매 생성/오픈, 사용자 참여 등록, 주문 일괄 생성 및 결제 연동.
-* **주요 엔드포인트**:
-  * `POST /products`: 상품 등록
-  * `POST /groupbuy`: 공동구매 등록
-  * `POST /groupbuy/{groupbuyId}/open`: 공동구매 활성화
-  * `POST /groupbuy/{groupbuyId}/participate`: 공동구매 참여 신청 (비동기 처리 시작)
+groupbuy-service의 최종 실패 이벤트는 `tb_failed_event`에 다음 정보와 함께 저장됩니다.
 
-### 2) [inventory-service](file:///D:/Dev/group-purchase/services/inventory-service) (Kotlin)
-* **책임**: 상품별 재고 관리, 카프카 이벤트를 수신하여 원자적(Atomic) 재고 차감 및 결과 이벤트 발행.
-* **이벤트 리스너**:
-  * `groupbuy.participation.requested` 토픽을 구독하여 재고 차감 비즈니스 로직 수행.
+| 컬럼 | 내용 |
+| --- | --- |
+| `topic` | 최초 원본 Kafka 토픽 |
+| `payload` | 재처리에 필요한 원본 이벤트 JSON |
+| `error_message` | 마지막 처리 실패 메시지 |
+| `created_at` | 실패 기록 시각 |
 
-### 3) [product-service](file:///D:/Dev/group-purchase/services/product-service) & [user-service](file:///D:/Dev/group-purchase/services/user-service) (Skeletons)
-* **책임**: 향후 `groupbuy-service`에 뭉쳐 있는 상품 및 사용자 도메인을 완전 분리하기 위한 빈 서비스 스켈레톤 코드.
+> Non-blocking Retry는 처리량을 보호하지만 동일 키 이벤트의 처리 순서가 달라질 수 있습니다. 도메인 상태 전이와 멱등성 보강은 지속적인 개선 대상입니다.
 
----
+### Schema Management
 
-## 🚀 4. How to Run Locally
+- groupbuy-service는 Flyway 마이그레이션과 `ddl-auto=validate`를 사용합니다.
+- 서비스별 PostgreSQL 데이터베이스를 독립적으로 사용하며 다른 서비스의 테이블이나 Repository를 직접 참조하지 않습니다.
+- Kafka payload는 Jackson 3 기반 message converter를 통해 이벤트 DTO로 바인딩됩니다.
 
-### 1) 인프라 컨테이너 실행 (Docker Compose)
-로컬 환경에 Kafka 브로커와 PostgreSQL 인스턴스를 띄웁니다.
+## Tech Stack
+
+| 분류 | 기술 |
+| --- | --- |
+| Runtime | Java 21 |
+| Framework | Spring Boot 4.0.6 |
+| Languages | Java, Kotlin 2.1 |
+| Data | Spring Data JPA, PostgreSQL 16, Flyway |
+| Messaging | Apache Kafka (KRaft), Spring Kafka |
+| Serialization | Jackson 3 (`tools.jackson.*`) |
+| Infrastructure | Docker, Docker Compose, Kafka UI |
+
+## Services
+
+### [groupbuy-service](services/groupbuy-service)
+
+Java 기반 핵심 서비스입니다.
+
+- 상품 등록과 조회
+- 공동구매 생성과 오픈
+- 참여 요청과 상태 관리
+- 주문 생성, 결제 결과 반영과 취소
+- Kafka Retry/DLT 및 최종 실패 이벤트 대사
+
+주요 HTTP API:
+
+| Method | Path | 설명 |
+| --- | --- | --- |
+| `POST` | `/products` | 상품 등록 |
+| `GET` | `/products` | 상품 목록 조회 |
+| `GET` | `/products/{productId}` | 상품 단건 조회 |
+| `POST` | `/groupbuy` | 공동구매 생성 |
+| `POST` | `/groupbuy/{groupbuyId}/open` | 공동구매 오픈 |
+| `POST` | `/groupbuy/{groupbuyId}/participate` | 공동구매 참여 요청 |
+
+### [inventory-service](services/inventory-service)
+
+Kotlin 기반 재고 서비스입니다.
+
+- 상품 생성 이벤트를 통한 재고 등록
+- 참여 요청 이벤트를 통한 재고 차감
+- 재고 차감 성공·실패 이벤트 발행
+- 주문 취소 이벤트를 통한 재고 복구
+
+### Skeleton Services
+
+- [product-service](services/product-service)
+- [user-service](services/user-service)
+
+향후 상품과 사용자 도메인을 별도 서비스로 분리하기 위한 애플리케이션 스켈레톤입니다.
+
+## Run Locally
+
+### Prerequisites
+
+- JDK 21
+- Docker 및 Docker Compose
+
+### 1. Infrastructure
+
 ```bash
 docker compose up -d
 ```
-* **Kafka UI**: [http://localhost:8989](http://localhost:8989) (카프카 토픽 및 이벤트 모니터링 가능)
-* **Database Ports**: 
-  * `groupbuy-db`: 5433 (User: groupbuy, DB: groupbuy)
-  * `inventory-db`: 5434 (User: inventory, DB: inventory)
 
-### 2) 서비스 실행
-각 서비스의 디렉토리로 이동하여 Gradle을 통해 부트 스트랩을 실행합니다.
-* **groupbuy-service**:
-  ```bash
-  cd services/groupbuy-service
-  ./gradlew bootRun
-  ```
-* **inventory-service**:
-  ```bash
-  cd services/inventory-service
-  ./gradlew bootRun
-  ```
+| Component | Address |
+| --- | --- |
+| Kafka external listener | `localhost:9094` |
+| Kafka UI | [http://localhost:8989](http://localhost:8989) |
+| groupbuy PostgreSQL | `localhost:5433` |
+| inventory PostgreSQL | `localhost:5434` |
 
----
+### 2. Applications
 
-## 📈 5. Future Roadmap (향후 개선 계획)
+macOS/Linux:
 
-- [ ] **Transactional Outbox Pattern 적용**: 카프카 메시지 발행 실패 시에도 로컬 DB 트랜잭션과 일관성을 유지할 수 있도록 Outbox 테이블 도입.
-- [ ] **Spring Cloud Gateway & Eureka**: 서비스 엔드포인트 단일화 및 서비스 디스커버리 적용.
-- [ ] **Kotlin 코루틴 도입**: `inventory-service` 내 비동기 논블로킹 재고 차감 속도 극대화.
+```bash
+cd services/groupbuy-service
+./gradlew bootRun
+
+cd ../inventory-service
+./gradlew bootRun
+```
+
+Windows PowerShell:
+
+```powershell
+cd services/groupbuy-service
+.\gradlew.bat bootRun
+
+cd ..\inventory-service
+.\gradlew.bat bootRun
+```
+
+| Service | Port |
+| --- | --- |
+| groupbuy-service | `8081` |
+| inventory-service | `8082` |
+
+## Main Kafka Topics
+
+| Topic | Producer | Consumer | 목적 |
+| --- | --- | --- | --- |
+| `product.created` | groupbuy-service | inventory-service | 재고 초기화 |
+| `groupbuy.participation.requested` | groupbuy-service | inventory-service | 재고 차감 요청 |
+| `inventory.stock.decreased` | inventory-service | groupbuy-service | 참여 확정 |
+| `inventory.stock.decrease-failed` | inventory-service | groupbuy-service | 참여 실패 |
+| `groupbuy.confirmed` | groupbuy-service | groupbuy-service | 주문 일괄 생성 |
+| `order.created` | groupbuy-service | groupbuy-service | 결제 생성 |
+| `payment.completed` | groupbuy-service | groupbuy-service | 주문 완료·취소 |
+| `order.cancelled` | groupbuy-service | inventory-service, groupbuy-service | 재고 복구와 참여 실패 처리 |
+
+## Roadmap
+
+- Transactional Outbox를 통한 DB 트랜잭션과 Kafka 발행의 원자성 강화
+- 이벤트 ID 기반 소비 멱등성 보장
+- Retry/DLT lag 및 실패 이벤트 운영 모니터링
+- 안전한 DLT Replay 절차와 복구 상태 관리
+- malformed JSON처럼 DTO 변환 단계에서 실패한 메시지의 원문 보존
+- API Gateway와 서비스 디스커버리 검토
