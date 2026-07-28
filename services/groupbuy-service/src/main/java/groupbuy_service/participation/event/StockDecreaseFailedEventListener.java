@@ -39,8 +39,8 @@ public class StockDecreaseFailedEventListener {
     @DltHandler
     public void handleDlt(
             StockDecreaseFailedEvent event,
-            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
-            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
+            @Header(KafkaHeaders.DLT_ORIGINAL_TOPIC) String topic,
+            @Header(value = KafkaHeaders.DLT_EXCEPTION_MESSAGE, required = false) String exceptionMessage
     ) {
         String errorMessage = exceptionMessage != null
                 ? exceptionMessage
