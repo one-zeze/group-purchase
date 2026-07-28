@@ -7,15 +7,32 @@ Apache Kafka와 Spring Boot 기반의 이벤트 주도 공동구매 시스템입
 ## System Architecture
 
 ```text
-┌──────────────────────────┐         Kafka          ┌──────────────────────────┐
-│ groupbuy-service         │ ─────────────────────▶ │ inventory-service        │
-│ Java / Spring Boot       │ ◀───────────────────── │ Kotlin / Spring Boot     │
-│                          │                        │                          │
-│ 상품 · 공동구매 · 참여   │                        │ 재고 차감 · 재고 복구     │
-│ 주문 · 결제 · DLT 대사   │                        │                          │
-└────────────┬─────────────┘                        └────────────┬─────────────┘
-             │                                                   │
-       PostgreSQL:5433                                    PostgreSQL:5434
+                         HTTP API
+                            |
+                            v
+                  +--------------------+
+                  |  groupbuy-service  |
+                  |  Java / Spring     |
+                  +---------+----------+
+                            |
+                            | publish / consume
+                            v
+                  +--------------------+
+                  |    Apache Kafka    |
+                  |    KRaft mode      |
+                  +---------+----------+
+                            |
+                            | publish / consume
+                            v
+                  +--------------------+
+                  | inventory-service  |
+                  | Kotlin / Spring    |
+                  +--------------------+
+
+          groupbuy-service             inventory-service
+                  |                            |
+                  v                            v
+       PostgreSQL :5433             PostgreSQL :5434
 ```
 
 ### 공동구매 참여와 재고 차감
