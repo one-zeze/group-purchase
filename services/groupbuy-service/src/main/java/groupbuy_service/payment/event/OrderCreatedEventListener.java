@@ -40,9 +40,12 @@ public class OrderCreatedEventListener {
     @DltHandler
     public void handleDlt(
             OrderCreatedEvent event,
-            @Header(KafkaHeaders.DLT_ORIGINAL_TOPIC)String topic,
-            @Header(value = KafkaHeaders.DLT_EXCEPTION_MESSAGE, required = false) String exceptionMessage
+            @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) String originalTopic,
+            @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
     ) {
+        String topic = originalTopic != null
+                ? originalTopic
+                : OrderCreatedEvent.TOPIC;
         String errorMessage = exceptionMessage != null
                 ? exceptionMessage
                 : "FailedEvent: OrderCreatedEvent";
