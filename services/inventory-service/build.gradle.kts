@@ -32,7 +32,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 
-	implementation ("org.flywaydb:flyway-core")
+	implementation ("org.springframework.boot:spring-boot-starter-flyway")
 	implementation ("org.flywaydb:flyway-database-postgresql")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

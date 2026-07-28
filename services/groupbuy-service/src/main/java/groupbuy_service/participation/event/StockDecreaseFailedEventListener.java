@@ -1,9 +1,7 @@
-package groupbuy_service.order.event;
+package groupbuy_service.participation.event;
 
 import groupbuy_service.global.reconciliation.service.DltReconciliationService;
-import groupbuy_service.order.service.OrderService;
-import groupbuy_service.payment.domain.PaymentStatus;
-import groupbuy_service.payment.event.PaymentCompletedEvent;
+import groupbuy_service.participation.service.ParticipationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -19,9 +17,9 @@ import tools.jackson.core.JacksonException;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentCompletedEventListener {
+public class StockDecreaseFailedEventListener {
 
-    private final OrderService orderService;
+    private final ParticipationService participationService;
     private final DltReconciliationService dltReconciliationService;
 
     @RetryableTopic(
@@ -31,33 +29,28 @@ public class PaymentCompletedEventListener {
             dltStrategy = DltStrategy.FAIL_ON_ERROR,
             autoCreateTopics = "true"
     )
-    @KafkaListener(topics = PaymentCompletedEvent.TOPIC, groupId = "groupbuy-service-order")
-    public void onPaymentCompleted(PaymentCompletedEvent event) throws Exception{
-        log.info("결제 완료 이벤트 수신: orderId={}, status={}", event.orderId(), event.status());
-        if (event.status() == PaymentStatus.SUCCESS) {
-            orderService.completedOrder(event.orderId());
-        }
-        else if (event.status() == PaymentStatus.FAILED) {
-            orderService.cancelOrder(event.orderId());
-        }
-
+    @KafkaListener(topics = StockDecreaseFailedEvent.TOPIC, groupId = "groupbuy-service-group")
+    public void onStockDecreaseFailed(StockDecreaseFailedEvent event) throws Exception {
+        log.info("[groupbuy-service] 재고 차감 실패 수신: participationId={}, reason={}",
+                event.participationId(), event.errorMessage());
+        participationService.failParticipation(event.participationId());
     }
 
     @DltHandler
     public void handleDlt(
-            PaymentCompletedEvent event,
+            StockDecreaseFailedEvent event,
             @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) String originalTopic,
             @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage
     ) {
         String topic = originalTopic != null
                 ? originalTopic
-                : PaymentCompletedEvent.TOPIC;
+                : StockDecreaseFailedEvent.TOPIC;
         String errorMessage = exceptionMessage != null
                 ? exceptionMessage
-                : "FailedEvent: PaymentCompletedEvent";
+                : "FailedEvent: StockDecreaseFailedEvent";
 
-        log.error("결제 완료 처리 실패, topic: {}, event: {}, content: {}", topic, event, errorMessage);
+        log.error("[DLT] 재고 차감 실패 이벤트 처리 최종 실패. topic: {}, event: {}, content: {}", topic, event, errorMessage);
         dltReconciliationService.logFailedEvent(topic, event, errorMessage);
-    }
 
+    }
 }
