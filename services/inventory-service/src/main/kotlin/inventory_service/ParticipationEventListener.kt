@@ -1,6 +1,7 @@
 package inventory_service.event
 
 import inventory_service.global.error.BusinessException
+import inventory_service.global.error.ErrorCode
 import inventory_service.service.InventoryService
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.BackOff
@@ -43,13 +44,13 @@ class ParticipationEventListener(
 
             publishSuccessEvent(event)
         } catch (e: BusinessException) {
-            log.error("[inventory-service] 재고 차감 비즈니스 실패: {}", e.errorCode.msg)
+            if (shouldRetry(e.errorCode)) {
+                throw e
+            }
+
+            log.warn("[inventory-service] 재고 차감 비즈니스 실패: {}", e.errorCode.msg)
             publishFailureEvent(event, e.errorCode.name, e.errorCode.msg)
             // 비즈니스 예외(재고 부족 등)는 정상적인 Saga 실패 흐름이므로 throw하지 않고 완료 처리.
-        } catch (e: Exception) {
-            log.error("[inventory-service] 재고 차감 시스템 오류: {}", e.message)
-            publishFailureEvent(event, "INTERNAL_ERROR", e.message ?: "Unknown error")
-            throw e // 시스템 예외(DB 다운 등)는 throw하여 재시도를 유발.
         }
     }
 
@@ -79,4 +80,13 @@ class ParticipationEventListener(
         val payload = jsonMapper.writeValueAsString(failureEvent)
         kafkaTemplate.send(StockDecreaseFailedEvent.TOPIC, requestEvent.participationId, payload)
     }
+
+    private fun shouldRetry(errorCode: ErrorCode): Boolean =
+        when (errorCode) {
+            ErrorCode.PRODUCT_NOT_FOUND,
+            ErrorCode.INTERNAL_ERROR -> true
+
+            else -> false
+        }
+
 }
