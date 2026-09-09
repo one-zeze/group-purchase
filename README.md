@@ -82,7 +82,7 @@ original topic
   → dlt
 ```
 
-groupbuy-service의 최종 실패 이벤트는 `tb_failed_event`에 다음 정보와 함께 저장됩니다.
+groupbuy-service와 inventory-service는 최종 실패 이벤트를 각 서비스의 `tb_failed_event`에 저장합니다.
 
 | 컬럼 | 내용 |
 | --- | --- |
@@ -91,11 +91,13 @@ groupbuy-service의 최종 실패 이벤트는 `tb_failed_event`에 다음 정�
 | `error_message` | 마지막 처리 실패 메시지 |
 | `created_at` | 실패 기록 시각 |
 
+inventory-service는 원본 Kafka 레코드의 `partition`과 `offset`도 함께 저장합니다. `(topic, original_partition, original_offset)` 복합 유일성 제약과 원자적인 중복 무시 INSERT를 사용하여 동일한 DLT 레코드가 재전달되어도 한 번만 기록합니다.
+
 > Non-blocking Retry는 처리량을 보호하지만 동일 키 이벤트의 처리 순서가 달라질 수 있습니다. 도메인 상태 전이와 멱등성 보강은 지속적인 개선 대상입니다.
 
 ### Schema Management
 
-- groupbuy-service는 Flyway 마이그레이션과 `ddl-auto=validate`를 사용합니다.
+- groupbuy-service와 inventory-service는 Flyway 마이그레이션과 `ddl-auto=validate`를 사용합니다.
 - 서비스별 PostgreSQL 데이터베이스를 독립적으로 사용하며 다른 서비스의 테이블이나 Repository를 직접 참조하지 않습니다.
 - Kafka payload는 Jackson 3 기반 message converter를 통해 이벤트 DTO로 바인딩됩니다.
 
@@ -142,6 +144,7 @@ Kotlin 기반 재고 서비스입니다.
 - 참여 요청 이벤트를 통한 재고 차감
 - 재고 차감 성공·실패 이벤트 발행
 - 주문 취소 이벤트를 통한 재고 복구
+- Kafka Retry/DLT 및 원본 레코드 좌표 기반 실패 이벤트 중복 방지
 
 ### Skeleton Services
 
