@@ -10,4 +10,8 @@ data class OrderCancelledEvent(
     val orderId: String,
     val productId: String,
     val quantity: Int = 0
-)
+) {
+    companion object {
+        const val TOPIC = "order.cancelled"
+    }
+}

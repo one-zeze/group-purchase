@@ -11,4 +11,8 @@ data class ProductCreatedEvent(
     val name: String,
     val price: BigDecimal,
     val initialStock: Int
-)
+) {
+    companion object {
+        const val TOPIC = "product.created"
+    }
+}

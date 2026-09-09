@@ -2,6 +2,7 @@ package inventory_service.event
 
 import inventory_service.global.error.BusinessException
 import inventory_service.global.error.ErrorCode
+import inventory_service.global.reconciliation.DltReconciliationService
 import inventory_service.service.InventoryService
 import org.slf4j.LoggerFactory
 import org.springframework.kafka.annotation.BackOff
@@ -20,7 +21,8 @@ import tools.jackson.databind.json.JsonMapper
 class ParticipationEventListener(
     private val jsonMapper: JsonMapper,
     private val inventoryService: InventoryService,
-    private val kafkaTemplate: KafkaTemplate<String, String>
+    private val kafkaTemplate: KafkaTemplate<String, String>,
+    private val dltReconciliationService: DltReconciliationService
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -31,7 +33,7 @@ class ParticipationEventListener(
         dltStrategy = DltStrategy.FAIL_ON_ERROR,
         autoCreateTopics = "true"
     )
-    @KafkaListener(topics = ["groupbuy.participation.requested"], groupId = "inventory-service-group")
+    @KafkaListener(topics = [ParticipationRequestedEvent.TOPIC], groupId = "inventory-service-group")
     fun onParticipationRequested(event: ParticipationRequestedEvent) {
         try {
             log.info(
@@ -55,8 +57,16 @@ class ParticipationEventListener(
     }
 
     @DltHandler
-    fun handleDlt(event: ParticipationRequestedEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error("[DLT] 참여 요청 처리 최종 실패. topic: $topic, content: $event")
+    fun handleDlt(
+        event: ParticipationRequestedEvent,
+        @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
+    ) {
+        val topic = originalTopic ?: ParticipationRequestedEvent.TOPIC
+        val errorMessage = exceptionMessage ?: "FailedEvent: ParticipationRequestedEvent"
+
+        log.error("[DLT] 참여 요청 처리 최종 실패. topic={}, error={}, content={}", topic, errorMessage, event)
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage)
     }
 
     private fun publishSuccessEvent(requestEvent: ParticipationRequestedEvent) {

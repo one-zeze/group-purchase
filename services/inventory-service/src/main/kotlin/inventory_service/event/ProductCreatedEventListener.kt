@@ -2,6 +2,7 @@ package inventory_service.event
 
 import inventory_service.global.error.BusinessException
 import inventory_service.global.error.ErrorCode
+import inventory_service.global.reconciliation.DltReconciliationService
 import inventory_service.service.InventoryService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.kafka.annotation.BackOff
@@ -16,7 +17,8 @@ import tools.jackson.core.JacksonException
 
 @Component
 class ProductCreatedEventListener(
-    private val inventoryService: InventoryService
+    private val inventoryService: InventoryService,
+    private val dltReconciliationService: DltReconciliationService
 ) {
     private val log = KotlinLogging.logger {}
 
@@ -27,7 +29,7 @@ class ProductCreatedEventListener(
         dltStrategy = DltStrategy.FAIL_ON_ERROR,
         autoCreateTopics = "true"
     )
-    @KafkaListener(topics = ["product.created"], groupId = "product-created-event")
+    @KafkaListener(topics = [ProductCreatedEvent.TOPIC], groupId = "product-created-event")
     fun registProduct(event: ProductCreatedEvent) {
         try {
             log.info { "상품등록 이벤트 메시지 수신 성공: $event" }
@@ -39,18 +41,22 @@ class ProductCreatedEventListener(
                     return
                 }
                 else -> {
-                    log.error(e) { "상품등록 이벤트 처리 실패" }
                     throw e
                 }
             }
-        } catch (e: Exception) {
-            log.error(e) { "상품등록 이벤트 메시지 수신 실패" }
-            throw e
         }
     }
 
     @DltHandler
-    fun handleDlt(event: ProductCreatedEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error { "[DLT] 상품 등록 처리 최종 실패. topic: $topic, content: $event" }
+    fun handleDlt(
+        event: ProductCreatedEvent,
+        @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
+    ) {
+        val topic = originalTopic ?: ProductCreatedEvent.TOPIC
+        val errorMessage = exceptionMessage ?: "FailedEvent: ProductCreatedEvent"
+
+        log.error { "[DLT] 상품 등록 처리 최종 실패. topic=$topic, error=$errorMessage, content=$event" }
+        dltReconciliationService.logFailedEvent(topic, event, errorMessage)
     }
 }
