@@ -14,14 +14,39 @@ class DltReconciliationService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Transactional
-    fun logFailedEvent(topic: String, payload: Any, errorMessage: String) {
-        failedEventRepository.save(
-            FailedEvent(
-                topic = topic,
-                payload = serializePayload(payload),
-                errorMessage = errorMessage
-            )
+    fun logFailedEvent(
+        topic: String,
+        originalPartition: Int?,
+        originalOffset: Long?,
+        payload: Any,
+        errorMessage: String
+    ) {
+        val failedEvent = FailedEvent(
+            topic = topic,
+            originalPartition = originalPartition,
+            originalOffset = originalOffset,
+            payload = serializePayload(payload),
+            errorMessage = errorMessage
         )
+
+        val insertedRows = failedEventRepository.insertIgnoringDuplicate(
+            failedEventId = failedEvent.failedEventId,
+            topic = failedEvent.topic,
+            originalPartition = failedEvent.originalPartition,
+            originalOffset = failedEvent.originalOffset,
+            payload = failedEvent.payload,
+            errorMessage = failedEvent.errorMessage,
+            createdAt = failedEvent.createdAt
+        )
+
+        if (insertedRows == 0) {
+            log.info(
+                "DLT failed event already recorded. topic={}, partition={}, offset={}",
+                topic,
+                originalPartition,
+                originalOffset
+            )
+        }
     }
 
     private fun serializePayload(payload: Any): String =

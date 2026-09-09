@@ -51,12 +51,14 @@ class ProductCreatedEventListener(
     fun handleDlt(
         event: ProductCreatedEvent,
         @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.ORIGINAL_PARTITION, required = false) originalPartition: Int?,
+        @Header(value = KafkaHeaders.ORIGINAL_OFFSET, required = false) originalOffset: Long?,
         @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
     ) {
         val topic = originalTopic ?: ProductCreatedEvent.TOPIC
         val errorMessage = exceptionMessage ?: "FailedEvent: ProductCreatedEvent"
 
         log.error { "[DLT] 상품 등록 처리 최종 실패. topic=$topic, error=$errorMessage, content=$event" }
-        dltReconciliationService.logFailedEvent(topic, event, errorMessage)
+        dltReconciliationService.logFailedEvent(topic, originalPartition, originalOffset, event, errorMessage)
     }
 }

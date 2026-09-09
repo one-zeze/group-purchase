@@ -36,12 +36,14 @@ class OrderCancelledEventListener(
     fun handleDlt(
         event: OrderCancelledEvent,
         @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.ORIGINAL_PARTITION, required = false) originalPartition: Int?,
+        @Header(value = KafkaHeaders.ORIGINAL_OFFSET, required = false) originalOffset: Long?,
         @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
     ) {
         val topic = originalTopic ?: OrderCancelledEvent.TOPIC
         val errorMessage = exceptionMessage ?: "FailedEvent: OrderCancelledEvent"
 
         log.error { "[DLT] 주문취소 재고 처리 최종 실패. topic=$topic, error=$errorMessage, content=$event" }
-        dltReconciliationService.logFailedEvent(topic, event, errorMessage)
+        dltReconciliationService.logFailedEvent(topic, originalPartition, originalOffset, event, errorMessage)
     }
 }

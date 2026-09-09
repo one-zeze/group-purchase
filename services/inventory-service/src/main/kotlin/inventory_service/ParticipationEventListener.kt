@@ -60,13 +60,15 @@ class ParticipationEventListener(
     fun handleDlt(
         event: ParticipationRequestedEvent,
         @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.ORIGINAL_PARTITION, required = false) originalPartition: Int?,
+        @Header(value = KafkaHeaders.ORIGINAL_OFFSET, required = false) originalOffset: Long?,
         @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
     ) {
         val topic = originalTopic ?: ParticipationRequestedEvent.TOPIC
         val errorMessage = exceptionMessage ?: "FailedEvent: ParticipationRequestedEvent"
 
         log.error("[DLT] 참여 요청 처리 최종 실패. topic={}, error={}, content={}", topic, errorMessage, event)
-        dltReconciliationService.logFailedEvent(topic, event, errorMessage)
+        dltReconciliationService.logFailedEvent(topic, originalPartition, originalOffset, event, errorMessage)
     }
 
     private fun publishSuccessEvent(requestEvent: ParticipationRequestedEvent) {
