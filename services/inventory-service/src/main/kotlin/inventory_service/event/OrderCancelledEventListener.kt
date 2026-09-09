@@ -1,5 +1,6 @@
 package inventory_service.event
 
+import inventory_service.global.reconciliation.DltReconciliationService
 import inventory_service.service.InventoryService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.kafka.annotation.BackOff
@@ -14,7 +15,8 @@ import tools.jackson.core.JacksonException
 
 @Component
 class OrderCancelledEventListener(
-    private val inventoryService: InventoryService
+    private val inventoryService: InventoryService,
+    private val dltReconciliationService: DltReconciliationService
 ) {
     private val log = KotlinLogging.logger {}
 
@@ -25,18 +27,23 @@ class OrderCancelledEventListener(
         dltStrategy = DltStrategy.FAIL_ON_ERROR,
         autoCreateTopics = "true"
     )
-    @KafkaListener(topics = ["order.cancelled"], groupId = "inventory-service-order-cancelled")
+    @KafkaListener(topics = [OrderCancelledEvent.TOPIC], groupId = "inventory-service-order-cancelled")
     fun restoreStock(event: OrderCancelledEvent) {
-        try {
-            inventoryService.increaseStock(event.productId, event.quantity)
-        } catch (e: Exception) {
-            log.error(e) { "주문취소 재고 처리 실패" }
-            throw e
-        }
+        inventoryService.increaseStock(event.productId, event.quantity)
     }
 
     @DltHandler
-    fun handleDlt(event: OrderCancelledEvent, @Header(KafkaHeaders.RECEIVED_TOPIC) topic: String) {
-        log.error { "[DLT] 주문취소 재고 처리 최종 실패. topic: $topic, content: $event" }
+    fun handleDlt(
+        event: OrderCancelledEvent,
+        @Header(value = KafkaHeaders.ORIGINAL_TOPIC, required = false) originalTopic: String?,
+        @Header(value = KafkaHeaders.ORIGINAL_PARTITION, required = false) originalPartition: Int?,
+        @Header(value = KafkaHeaders.ORIGINAL_OFFSET, required = false) originalOffset: Long?,
+        @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) exceptionMessage: String?
+    ) {
+        val topic = originalTopic ?: OrderCancelledEvent.TOPIC
+        val errorMessage = exceptionMessage ?: "FailedEvent: OrderCancelledEvent"
+
+        log.error { "[DLT] 주문취소 재고 처리 최종 실패. topic=$topic, error=$errorMessage, content=$event" }
+        dltReconciliationService.logFailedEvent(topic, originalPartition, originalOffset, event, errorMessage)
     }
 }

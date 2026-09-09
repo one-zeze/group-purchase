@@ -11,4 +11,8 @@ data class ParticipationRequestedEvent(
     val productId: String = "",
     val userId: String = "",
     val quantity: Int = 0
-)
+) {
+    companion object {
+        const val TOPIC = "groupbuy.participation.requested"
+    }
+}
